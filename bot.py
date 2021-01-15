@@ -4,9 +4,14 @@ from bs4 import BeautifulSoup
 from konlpy.tag import Okt
 import urllib.request
 import os, re, json, random
+import discord
+from discord.ext import commands
 
 #네이버 맞춤법 검사 요청에 user-agent 헤더 추가
 import requests
+
+dict_file = "chatbot-data.json"
+dic = {}
 
 
 # 마르코프 체인 딕셔너리 만들기 --- (※1)
@@ -22,6 +27,21 @@ def make_dic(words):
             tmp = ["@"]
             continue
     return dic
+def register_dic(words):
+    global dic
+    if len(words) == 0: return
+    tmp = ["@"]
+    for i in words:
+        word = i[0]
+        if word == "" or word == "\r\n" or word == "\n": continue
+        tmp.append(word)
+        if len(tmp) < 3: continue
+        if len(tmp) > 3: tmp = tmp[1:]
+        set_word3(dic, tmp)
+        if word == "." or word == "?":
+            tmp = ["@"]
+            continue
+    json.dump(dic, open(dict_file, "w", encoding="utf-8"))
 # 딕셔너리에 데이터 등록하기 --- (※2)
 def set_word3(dic, s3):
     w1, w2, w3 = s3
@@ -30,10 +50,11 @@ def set_word3(dic, s3):
     if not w3 in dic[w1][w2]: dic[w1][w2][w3] = 0
     dic[w1][w2][w3] += 1
 # 문장 만들기 --- (※3)
-def make_sentence(dic):
+def make_sentence(head):
+    if not head in dic: return ""
     ret = []
-    if not "@" in dic: return "no dic" 
-    top = dic["@"]
+    if head != "@": ret.append(head)
+    top = dic[head]
     w1 = word_choice(top)
     w2 = word_choice(top[w1])
     ret.append(w1)
@@ -61,9 +82,22 @@ def make_sentence(dic):
 def word_choice(sel):
     keys = sel.keys()
     return random.choice(list(keys))
+
+def make_reply(text):   
+    if not text[-1] in [".","?"]: text += "."
+    try:
+        okt = Okt()
+    except Exception as e:
+        print(e)
+    words = okt.pos(text)
+    register_dic(words)
+    for word in words:
+        face = word[0]
+        if face in dic: 
+             return make_sentence(face)
+    return make_sentence("@")
+
 # 문장 읽어 들이기 --- (※4)
-toji_file = "toji.txt"
-dict_file = "markov-toji.json"
 if not os.path.exists(dict_file):
     # 토지 텍스트 파일 읽어 들이기
     fp = codecs.open("BEXX0003.txt", "r", encoding="utf-16")
@@ -86,9 +120,26 @@ if not os.path.exists(dict_file):
     dic = make_dic(words)
     json.dump(dic, open(dict_file,"w", encoding="utf-8"))
 else:
-    dic = json.load(open(dict_file,"r"))
-# 문장 만들기 --- (※6)
-for i in range(3):
-    s = make_sentence(dic)
-    print(s)
-    print("---")
+    dic = json.load(open(dict_file,"r", encoding="utf-8"))   
+
+
+
+client = commands.Bot(command_prefix='.')
+
+@client.event
+async def on_ready():
+    print("Bot is ready.")
+
+@client.event
+async def on_message(message):
+    msg = message.content
+    try:
+        if(msg[0:3] == "!! "): 
+            msg = msg[3:]
+            new_msg = make_reply(msg)
+            print(new_msg)
+            await message.channel.send(new_msg)        
+    except:
+        print()
+
+client.run('Nzk5NjI4NTY2MDgxMTc1NTUy.YAGWIg.gPGSW_UL8ucdBqQ7lY6q4fhxJv0')
