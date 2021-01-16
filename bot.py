@@ -60,8 +60,11 @@ def make_sentence(head):
     ret.append(w1)
     ret.append(w2)
     while True:
-        w3 = word_choice(dic[w1][w2])
-        ret.append(w3)
+        try:
+            w3 = word_choice(dic[w1][w2])
+            ret.append(w3)
+        except:
+            w3 = "."
         if w3 == ".": break
         w1, w2 = w2, w3
     ret = "".join(ret)
@@ -138,8 +141,15 @@ async def on_message(message):
             msg = msg[3:]
             new_msg = make_reply(msg)
             print(new_msg)
-            await message.channel.send(new_msg)        
+            await message.channel.send(new_msg)     
+        elif(msg[0:2] == "!p"):
+            pass
+        elif(msg[0:1] == "!"):
+            await message.channel.send("나 부른 고야? (사용법: !! [보낼 메세지])")       
+        else:
+            new_msg = make_reply(msg)
+
     except:
         print()
 
-client.run('Nzk5NjI4NTY2MDgxMTc1NTUy.YAGWIg.gPGSW_UL8ucdBqQ7lY6q4fhxJv0')
+client.run('ID')
