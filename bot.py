@@ -6,6 +6,9 @@ import urllib.request
 import os, re, json, random
 import discord
 from discord.ext import commands
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 #네이버 맞춤법 검사 요청에 user-agent 헤더 추가
 import requests
@@ -100,6 +103,28 @@ def make_reply(text):
              return make_sentence(face)
     return make_sentence("@")
 
+def sendEmail():
+    try:
+        smtp = smtplib.SMTP('smtp.gmail.com', 587)
+        smtp.ehlo()     
+        smtp.starttls()  
+        smtp.login('MAIL (FROM)', 'GOOGLE ACCOUNT APP PASSWORD')
+        
+        # msg = MIMEText(str(dic))   
+        msg = MIMEMultipart("alternative")
+        f = codecs.open(dict_file, "r", "utf-8")
+        attachment = MIMEText(f.read())
+        attachment.add_header('Content-Disposition', 'attachment', filename=dict_file)
+        msg.attach(attachment)     
+        msg['Subject'] = 'chatbot data json file'
+        msg['To'] = 'yumehamakei@gmail.com'
+        smtp.sendmail('MAIL (FROM)', 'MAIL (TO)', msg.as_string())
+        print("출력완료")
+        smtp.quit()
+    except Exception as e:
+        print(e)
+
+
 # 문장 읽어 들이기 --- (※4)
 if not os.path.exists(dict_file):
     # 토지 텍스트 파일 읽어 들이기
@@ -126,7 +151,6 @@ else:
     dic = json.load(open(dict_file,"r", encoding="utf-8"))   
 
 
-
 client = commands.Bot(command_prefix='.')
 
 @client.event
@@ -146,10 +170,12 @@ async def on_message(message):
             pass
         elif(msg[0:1] == "!"):
             await message.channel.send("나 부른 고야? (사용법: !! [보낼 메세지])")       
+        elif(msg == "yumehama bot! export json file"): 
+            sendEmail()
         else:
             new_msg = make_reply(msg)
 
     except:
         print()
 
-client.run('ID')
+client.run('BOT_ID')
